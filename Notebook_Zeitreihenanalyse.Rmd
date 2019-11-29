@@ -15,16 +15,16 @@ output:
 
 <br>
 
-# Ausgangslage
-
-## Fragestellungen
-
-
-
 
 # Abstract
+## Ausgangslage
+tbd
 
+## Fragestellung
+tbd
 
+## Ergebnisse
+tbd
 
 <br><br>
 
@@ -56,7 +56,9 @@ library(xts)  # more efficient time series format
 
 <br><br>
 
+
 # Bewertung der Datenlage
+
 ## Daten Laden
 
 **Hauptdaten**
@@ -66,9 +68,6 @@ library(xts)  # more efficient time series format
 # load & preprocess data
 
 d <- read_csv("./dataset_lenzerheide.csv")
-d_test <- read_csv("./lenzerheide_zeiraeume_ohne_leere_labels.csv")
-
-glimpse(d)
 
 # lower case all variable names for easier programming
 d %<>% rename_all(tolower)
@@ -80,7 +79,8 @@ d %<>%
   arrange(desc(datum))
 
 d %<>% filter(datum < "2016-05-01" | datum > "2017-04-30")
-?write.csv(d, file = "lenzerheide_zeiraeume_ohne_leere_labels.csv", )
+write_csv(d, "./lenzerheide_zeiraeume_ohne_leere_labels.csv")  # for future ...
+# ... working with Python for everybody in this project
 
 introduce(d)
 plot_intro(d)
@@ -88,13 +88,14 @@ plot_missing(d)
 plot_correlation(d)
 plot_histogram(d)
 
-
 ```
 
 
 <br><br>
 
+
 # Zeitreihe analysieren
+
 ## Schalter
 
 ```{r warning=TRUE}
@@ -185,6 +186,9 @@ dygraph(d_schalter_daily_xts, main = "Daily aggregated line plot") %>%
 
 
 <br><br>
+
+
+
 
 
 
@@ -193,10 +197,12 @@ dygraph(d_schalter_daily_xts, main = "Daily aggregated line plot") %>%
 ## Telefon
 
 ```{r warning=TRUE}
-d_schalter <- d %>% select(datum, schalter)
+d_telefon <- d %>% select(datum, tel)
+plot_missing(d_telefon)
+d_telefon <- na.omit(d_telefon)  # remove 3% of data with NAs
 
 # show first plot
-plot(d_schalter, type = "l")  # base R
+plot(d_telefon, type = "l")  # base R
 ```
 
 
@@ -209,46 +215,46 @@ plot(d_schalter, type = "l")  # base R
 ```{r}
 # create time series
 
-(d_schalter_ts <- ts(d_schalter[,-1], start = c(2016,1),  end = c(2019, 9), frequency = 365))  # static plot
+(d_telefon_ts <- ts(d_telefon[,-1], start = c(2016,1),  end = c(2019, 9), frequency = 365))  # static plot
 
-autoplot(d_schalter_ts)  # improved graph
+autoplot(d_telefon_ts)  # improved graph
 
 # decompose
-d_schalter_decompose <- decompose(d_schalter_ts)  # base R
-plot(d_schalter_decompose)  # base R
+d_telefon_decompose <- decompose(d_telefon_ts)  # base R
+plot(d_telefon_decompose)  # base R
 
 
 # sesonality
-plot(as.ts(d_schalter_decompose$seasonal))
+plot(as.ts(d_telefon_decompose$seasonal))
  
 # trend
-plot(as.ts(d_schalter_decompose$trend))
+plot(as.ts(d_telefon_decompose$trend))
 
 # remainder
-plot(as.ts(d_schalter_decompose$random))
+plot(as.ts(d_telefon_decompose$random))
 
 # perform loess decomposition as well
 
-d_schalter_stl <- stl(d_schalter_ts, s.window = "periodic")
-plot(d_schalter_stl)  # base R
-autoplot(d_schalter_stl)
+d_telefon_stl <- stl(d_telefon_ts, s.window = "periodic")
+plot(d_telefon_stl)  # base R
+autoplot(d_telefon_stl)
 # seasonality
 
-(d_schalter_stl_season <- d_schalter_stl$time.series[, 1])
+(d_telefon_stl_season <- d_telefon_stl$time.series[, 1])
 
 # trend
-(d_schalter_stl_trend <- d_schalter_stl$time.series[, 2])
+(d_telefon_stl_trend <- d_telefon_stl$time.series[, 2])
 
 # remainder
-(d_schalter_stl_remainder <- d_schalter_stl$time.series[, 3])
+(d_telefon_stl_remainder <- d_telefon_stl$time.series[, 3])
 ```
 
 
 ### Vergleich decompose() und stl() Dekompositionen
 
 ```{r warning=FALSE}
-plot(d_schalter_decompose)  # base R
-(result_day <- autoplot(d_schalter_stl, title = "Daily Decomposition"))
+plot(d_telefon_decompose)  # base R
+(result_day <- autoplot(d_telefon_stl, title = "Daily Decomposition"))
 
 # one would continue to use stl because the decompose() function has two disadvantages:
 ## 1. The estimate of the trend is unavailable for the first few and last few observations.
@@ -264,16 +270,12 @@ plot(d_schalter_decompose)  # base R
 ### Resultate verdichtet
 
 ```{r message=FALSE, warning=FALSE}
-d_schalter_daily_xts <- xts(x = d$schalter, order.by = d$datum)
-names(d_schalter_daily_xts) <- "schalter"
+d_telefon_daily_xts <- xts(x = d$schalter, order.by = d$datum)
+names(d_telefon_daily_xts) <- "schalter"
 
-d_schalter_daily_monthly_xts <- apply.monthly(d_schalter_daily_xts, sum)
+d_telefon_daily_monthly_xts <- apply.monthly(d_telefon_daily_xts, sum)
 
-dygraph(d_schalter_daily_xts)
-
-# interactive graph
-dygraph(d_schalter_daily_xts, main = "Daily aggregated line plot") %>%
-  dyRangeSelector()
+dygraph(d_telefon_daily_xts)
 
 
 ```
@@ -285,13 +287,15 @@ dygraph(d_schalter_daily_xts, main = "Daily aggregated line plot") %>%
 
 
 
-## Schalter
+
+
+## Email
 
 ```{r warning=TRUE}
-d_schalter <- d %>% select(datum, schalter)
+d_email <- d %>% select(datum, schalter)
 
 # show first plot
-plot(d_schalter, type = "l")  # base R
+plot(d_email, type = "l")  # base R
 ```
 
 
@@ -304,46 +308,46 @@ plot(d_schalter, type = "l")  # base R
 ```{r}
 # create time series
 
-(d_schalter_ts <- ts(d_schalter[,-1], start = c(2016,1),  end = c(2019, 9), frequency = 365))  # static plot
+(d_email_ts <- ts(d_email[,-1], start = c(2016,1),  end = c(2019, 9), frequency = 365))  # static plot
 
-autoplot(d_schalter_ts)  # improved graph
+autoplot(d_email_ts)  # improved graph
 
 # decompose
-d_schalter_decompose <- decompose(d_schalter_ts)  # base R
-plot(d_schalter_decompose)  # base R
+d_email_decompose <- decompose(d_email_ts)  # base R
+plot(d_email_decompose)  # base R
 
 
 # sesonality
-plot(as.ts(d_schalter_decompose$seasonal))
+plot(as.ts(d_email_decompose$seasonal))
  
 # trend
-plot(as.ts(d_schalter_decompose$trend))
+plot(as.ts(d_email_decompose$trend))
 
 # remainder
-plot(as.ts(d_schalter_decompose$random))
+plot(as.ts(d_email_decompose$random))
 
 # perform loess decomposition as well
 
-d_schalter_stl <- stl(d_schalter_ts, s.window = "periodic")
-plot(d_schalter_stl)  # base R
-autoplot(d_schalter_stl)
+d_email_stl <- stl(d_email_ts, s.window = "periodic")
+plot(d_email_stl)  # base R
+autoplot(d_email_stl)
 # seasonality
 
-(d_schalter_stl_season <- d_schalter_stl$time.series[, 1])
+(d_email_stl_season <- d_email_stl$time.series[, 1])
 
 # trend
-(d_schalter_stl_trend <- d_schalter_stl$time.series[, 2])
+(d_email_stl_trend <- d_email_stl$time.series[, 2])
 
 # remainder
-(d_schalter_stl_remainder <- d_schalter_stl$time.series[, 3])
+(d_email_stl_remainder <- d_email_stl$time.series[, 3])
 ```
 
 
 ### Vergleich decompose() und stl() Dekompositionen
 
 ```{r warning=FALSE}
-plot(d_schalter_decompose)  # base R
-(result_day <- autoplot(d_schalter_stl, title = "Daily Decomposition"))
+plot(d_email_decompose)  # base R
+(result_day <- autoplot(d_email_stl, title = "Daily Decomposition"))
 
 # one would continue to use stl because the decompose() function has two disadvantages:
 ## 1. The estimate of the trend is unavailable for the first few and last few observations.
@@ -359,17 +363,12 @@ plot(d_schalter_decompose)  # base R
 ### Resultate verdichtet
 
 ```{r message=FALSE, warning=FALSE}
-d_schalter_daily_xts <- xts(x = d$schalter, order.by = d$datum)
-names(d_schalter_daily_xts) <- "schalter"
+d_email_daily_xts <- xts(x = d$schalter, order.by = d$datum)
+names(d_email_daily_xts) <- "schalter"
 
-d_schalter_daily_monthly_xts <- apply.monthly(d_schalter_daily_xts, sum)
+d_email_daily_monthly_xts <- apply.monthly(d_email_daily_xts, sum)
 
-dygraph(d_schalter_daily_xts)
-
-# interactive graph
-dygraph(d_schalter_daily_xts, main = "Daily aggregated line plot") %>%
-  dyRangeSelector()
-
+dygraph(d_email_daily_xts)
 
 ```
 
