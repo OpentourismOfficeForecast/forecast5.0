@@ -1,0 +1,203 @@
+---
+title: "Zeitreihenanalysen Lenzerheide"
+date: "November 2019"
+author:
+- Ramon Schildknecht
+output:
+  html_document:
+    df_print: paged
+    theme: united
+    toc: yes
+    number_sections: true
+    toc_float: true
+  pdf_document: default
+---
+
+<br>
+
+# Ausgangslage
+
+## Fragestellungen
+
+
+
+
+# Abstract
+
+
+
+<br><br>
+
+## Libraries laden
+
+```{r message=FALSE, warning=FALSE}
+# load libraries
+
+library(getPass)
+library(RCurl)
+library(tidyverse)
+library(magrittr)
+library(janitor)
+library(readxl)
+library(lubridate)
+library(DataExplorer)
+library(ggfortify)  # autoplot
+library(vistime)
+library(plotly)
+library(DT)
+library(summarytools)
+library(DT) # for dynamic tables
+library(wordcloud) # to render wordclouds
+library(tidytext) # for NLP
+library(tm)  # for text mining
+library(dygraphs)  # nice time series visualization
+library(xts)  # more efficient time series format
+```
+
+<br><br>
+
+# Bewertung der Datenlage
+
+
+
+### Daten Laden
+
+**Hauptdaten**
+
+
+```{r}
+# load & preprocess data
+
+d <- read_csv("./dataset_lenzerheide.csv")
+
+glimpse(d)
+
+# lower case all variable names for easier programming
+d %<>% rename_all(tolower)
+
+d$datum <- dmy(d$datum)
+
+d %<>%
+  filter(datum < "2019-10-01")%>%
+  arrange(desc(datum))
+
+d %<>% filter(datum < "2016-05-01" | datum > "2017-04-30")
+write.csv(d, file = "lenzerheide_zeiraeume_ohne_leere_labels.csv")
+
+introduce(d)
+plot_intro(d)
+plot_missing(d)
+plot_histogram(d)
+plot_correlation(d)
+
+```
+
+<br><br>
+
+## Explorative Datenanalyse
+
+```{r eval=FALSE, include=FALSE}
+DT::datatable(armee_main, 
+          filter = 'top',
+          class = 'cell-border stripe')
+```
+
+
+
+<br><br>
+
+# Zeitreihe analysieren
+
+```{r warning=TRUE}
+d_schalter <- d %>% select(datum, schalter)
+
+# show first plot
+plot(d_schalter, type = "l")  # base R
+```
+
+
+<br><br>
+
+
+
+## Vergleich auf Tagesbasis
+
+```{r}
+# create time series
+# armee_vehicles_ts <- ts(armee_v_w_week_ts_input[,-1], start = ymd(2017-01-02),  end = ymd(2019-09-27), frequency = 52)
+
+(d_schalter_ts <- ts(d_schalter[,-1], start = c(2016,1),  end = c(2019, 9), frequency = 365))  # static plot
+
+# plot.ts(armee_vehicles_ts)  # base R
+autoplot(d_schalter_ts)  # improved graph
+
+# decompose
+d_schalter_decompose <- decompose(d_schalter_ts)  # base R
+plot(d_schalter_decompose)  # base R
+
+
+# sesonality
+plot(as.ts(d_schalter_decompose$seasonal))
+ 
+# trend
+plot(as.ts(d_schalter_decompose$trend))
+
+# remainder
+plot(as.ts(d_schalter_decompose$random))
+
+# perform loess decomposition as well
+
+d_schalter_stl <- stl(d_schalter_ts, s.window = "periodic")
+plot(d_schalter_stl)  # base R
+autoplot(d_schalter_stl)
+# seasonality
+
+(armee_vehicles_stl_season <- d_schalter_stl$time.series[, 1])
+
+# trend
+(armee_vehicles_stl_trend <- d_schalter_stl$time.series[, 2])
+
+# remainder
+(armee_vehicles_stl_remainder <- d_schalter_stl$time.series[, 3])
+```
+
+
+### Vergleich decompose() und stl() Dekompositionen
+
+```{r warning=FALSE}
+plot(d_schalter_decompose)  # base R
+(result_day <- autoplot(d_schalter_stl, title = "Daily Decomposition"))
+
+# one would continue to use stl because the decompose() function has two disadvantages:
+## 1. The estimate of the trend is unavailable for the first few and last few observations.
+## 2. It assumes that the seasonal component repeats from year to year.
+## further advantages for stl -> https://stats.stackexchange.com/questions/85987/which-is-better-stl-or-decompose
+```
+
+
+
+<br><br>
+
+
+# Resultate verdichtet
+
+```{r message=FALSE, warning=FALSE}
+d_schalter_daily_xts <- xts(x = d$schalter, order.by = d$datum)
+names(d_schalter_daily_xts) <- "schalter"
+
+d_schalter_daily_monthly_xts <- apply.monthly(d_schalter_daily_xts, sum)
+
+dygraph(d_schalter_daily_xts)
+
+# interactive graph
+dygraph(d_schalter_daily_xts, main = "Daily aggregated line plot") %>%
+  dyRangeSelector()
+
+
+```
+
+
+<br><br>
+
+
+
