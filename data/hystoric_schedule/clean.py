@@ -8,8 +8,10 @@ The result is a csv file, consisting of numbers of employees needed for every da
 from openpyxl import load_workbook
 from calendar import monthrange
 from math import floor
-from datetime import datetime
+from datetime import datetime, timedelta
 import csv
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 def excel_style(col):
@@ -116,3 +118,11 @@ with open("/home/andre_eggli/Desktop/datacleaning/out/man_months_cleaned.csv", "
     csvwriter = csv.writer(csvfile,  delimiter=',')
     for point in result:
         csvwriter.writerow([point[0], point[1]])
+
+result = np.array(result)
+plt.plot(result[:, 0], result[:, 1])
+plt.xlabel("Date")
+plt.ylabel("Number of Employees Needed per Day")
+plt.xticks(np.array([datetime(2016,1,1), datetime(2017,1,1), datetime(2018,1,1), datetime(2019,1,1)]).astype(datetime))
+plt.savefig("Number of Employees per Day.png")
+plt.show()
